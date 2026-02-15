@@ -311,24 +311,56 @@ header h1 {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     background-color: var(--table-header-bg);
+    outline: none;
 }
 
-.paste-zone:hover,
-.paste-zone:focus {
+.paste-zone:hover {
     border-color: var(--primary-color);
     background-color: rgba(37, 99, 235, 0.05);
+    transform: scale(1.01);
+}
+
+.paste-zone:focus {
+    border-color: var(--primary-color);
+    background-color: rgba(37, 99, 235, 0.08);
+    border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .paste-zone.active {
     border-color: var(--primary-color);
-    background-color: rgba(37, 99, 235, 0.1);
+    background-color: rgba(37, 99, 235, 0.15);
+    border-width: 3px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+    }
 }
 
 .paste-hint {
     color: var(--text-muted);
     font-size: 0.95rem;
+    transition: color 0.3s ease;
+    text-align: center;
+    padding: 10px;
+}
+
+.paste-zone:focus .paste-hint {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.paste-zone.active .paste-hint {
+    color: var(--primary-color);
+    font-weight: 600;
 }
 
 .paste-zone img {

@@ -361,75 +361,238 @@ function setupEventListeners() {
 
 // Clipboard Paste Handling
 function setupClipboardPaste() {
-    // Add form paste zone
-    pasteZone.addEventListener('click', () => pasteZone.focus());
+    // Make paste zones focusable and add visual feedback
     pasteZone.setAttribute('tabindex', '0');
+    editPasteZone.setAttribute('tabindex', '0');
+    
+    // Add form paste zone - multiple event approaches for reliability
+    pasteZone.addEventListener('click', () => {
+        pasteZone.focus();
+        pasteZone.classList.add('active');
+    });
+    
+    pasteZone.addEventListener('focus', () => {
+        pasteZone.classList.add('active');
+        updatePasteHint(pasteZone, 'Ready to paste! Press Ctrl+V');
+    });
+    
+    pasteZone.addEventListener('blur', () => {
+        pasteZone.classList.remove('active');
+        updatePasteHint(pasteZone, 'Click here and paste image (Ctrl+V)');
+    });
     
     pasteZone.addEventListener('paste', (e) => handlePaste(e, false));
     pasteZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         pasteZone.classList.add('active');
+        updatePasteHint(pasteZone, 'Drop image here');
     });
-    pasteZone.addEventListener('dragleave', () => pasteZone.classList.remove('active'));
+    pasteZone.addEventListener('dragleave', () => {
+        pasteZone.classList.remove('active');
+        updatePasteHint(pasteZone, 'Click here and paste image (Ctrl+V)');
+    });
     pasteZone.addEventListener('drop', (e) => handleDrop(e, false));
     
     // Edit form paste zone
-    editPasteZone.addEventListener('click', () => editPasteZone.focus());
-    editPasteZone.setAttribute('tabindex', '0');
+    editPasteZone.addEventListener('click', () => {
+        editPasteZone.focus();
+        editPasteZone.classList.add('active');
+    });
+    
+    editPasteZone.addEventListener('focus', () => {
+        editPasteZone.classList.add('active');
+        updatePasteHint(editPasteZone, 'Ready to paste! Press Ctrl+V');
+    });
+    
+    editPasteZone.addEventListener('blur', () => {
+        editPasteZone.classList.remove('active');
+        updatePasteHint(editPasteZone, 'Click here and paste image (Ctrl+V)');
+    });
     
     editPasteZone.addEventListener('paste', (e) => handlePaste(e, true));
     editPasteZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         editPasteZone.classList.add('active');
+        updatePasteHint(editPasteZone, 'Drop image here');
     });
-    editPasteZone.addEventListener('dragleave', () => editPasteZone.classList.remove('active'));
+    editPasteZone.addEventListener('dragleave', () => {
+        editPasteZone.classList.remove('active');
+        updatePasteHint(editPasteZone, 'Click here and paste image (Ctrl+V)');
+    });
     editPasteZone.addEventListener('drop', (e) => handleDrop(e, true));
+    
+    // Global paste handler as fallback when tab is active
+    document.addEventListener('paste', (e) => {
+        // Only handle if paste zone is focused or active tab is add-tab
+        const addTabActive = document.getElementById('add-tab').classList.contains('active');
+        if (addTabActive && document.activeElement === pasteZone) {
+            handlePaste(e, false);
+        }
+    });
+}
+
+function updatePasteHint(zone, text) {
+    const hint = zone.querySelector('.paste-hint');
+    if (hint && !hint.classList.contains('hidden')) {
+        hint.textContent = text;
+    }
 }
 
 function handlePaste(e, isEdit) {
     e.preventDefault();
-    const items = e.clipboardData.items;
+    e.stopPropagation();
     
-    for (const item of items) {
-        if (item.type.startsWith('image/')) {
-            const file = item.getAsFile();
-            processImage(file, isEdit);
-            break;
+    const zone = isEdit ? editPasteZone : pasteZone;
+    updatePasteHint(zone, 'Processing image...');
+    
+    // Try to get image from clipboard
+    const clipboardData = e.clipboardData || e.originalEvent?.clipboardData || window.clipboardData;
+    
+    if (!clipboardData) {
+        console.error('No clipboard data available');
+        showPasteError(zone, 'Could not access clipboard');
+        return;
+    }
+    
+    let imageFound = false;
+    
+    // Method 1: Try clipboardData.items (modern browsers)
+    if (clipboardData.items) {
+        for (let i = 0; i < clipboardData.items.length; i++) {
+            const item = clipboardData.items[i];
+            
+            if (item.type.indexOf('image') !== -1) {
+                const file = item.getAsFile();
+                if (file) {
+                    imageFound = true;
+                    processImage(file, isEdit);
+                    break;
+                }
+            }
         }
+    }
+    
+    // Method 2: Try clipboardData.files (fallback)
+    if (!imageFound && clipboardData.files && clipboardData.files.length > 0) {
+        for (let i = 0; i < clipboardData.files.length; i++) {
+            const file = clipboardData.files[i];
+            if (file.type.indexOf('image') !== -1) {
+                imageFound = true;
+                processImage(file, isEdit);
+                break;
+            }
+        }
+    }
+    
+    // Method 3: Try to get image from types array
+    if (!imageFound && clipboardData.types) {
+        for (let i = 0; i < clipboardData.types.length; i++) {
+            if (clipboardData.types[i].indexOf('image') !== -1) {
+                // Try getData
+                const imageData = clipboardData.getData(clipboardData.types[i]);
+                if (imageData) {
+                    imageFound = true;
+                    // If it's already a data URL
+                    if (imageData.startsWith('data:image')) {
+                        displayImage(imageData, isEdit);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (!imageFound) {
+        console.warn('No image found in clipboard');
+        showPasteError(zone, 'No image found. Copy an image first!');
     }
 }
 
 function handleDrop(e, isEdit) {
     e.preventDefault();
+    e.stopPropagation();
+    
     const zone = isEdit ? editPasteZone : pasteZone;
     zone.classList.remove('active');
+    updatePasteHint(zone, 'Processing image...');
     
     const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].type.startsWith('image/')) {
-        processImage(files[0], isEdit);
+    if (files.length > 0) {
+        let imageFound = false;
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].type.startsWith('image/')) {
+                imageFound = true;
+                processImage(files[i], isEdit);
+                break;
+            }
+        }
+        
+        if (!imageFound) {
+            showPasteError(zone, 'Please drop an image file');
+        }
+    } else {
+        showPasteError(zone, 'No file dropped');
     }
 }
 
 function processImage(file, isEdit) {
+    if (!file) {
+        console.error('No file provided to processImage');
+        return;
+    }
+    
+    const zone = isEdit ? editPasteZone : pasteZone;
+    
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showPasteError(zone, 'Image too large. Max 10MB');
+        return;
+    }
+    
     const reader = new FileReader();
+    
     reader.onload = (e) => {
         const base64 = e.target.result;
-        
-        if (isEdit) {
-            editImageInput.value = base64;
-            editPreviewImage.src = base64;
-            editPreviewImage.classList.remove('hidden');
-            editClearImageBtn.classList.remove('hidden');
-            editPasteHint.classList.add('hidden');
-        } else {
-            newImageInput.value = base64;
-            previewImage.src = base64;
-            previewImage.classList.remove('hidden');
-            clearImageBtn.classList.remove('hidden');
-            pasteHint.classList.add('hidden');
-        }
+        displayImage(base64, isEdit);
     };
+    
+    reader.onerror = () => {
+        console.error('FileReader error');
+        showPasteError(zone, 'Failed to read image');
+    };
+    
     reader.readAsDataURL(file);
+}
+
+function displayImage(base64Data, isEdit) {
+    if (isEdit) {
+        editImageInput.value = base64Data;
+        editPreviewImage.src = base64Data;
+        editPreviewImage.classList.remove('hidden');
+        editClearImageBtn.classList.remove('hidden');
+        editPasteHint.classList.add('hidden');
+    } else {
+        newImageInput.value = base64Data;
+        previewImage.src = base64Data;
+        previewImage.classList.remove('hidden');
+        clearImageBtn.classList.remove('hidden');
+        pasteHint.classList.add('hidden');
+    }
+}
+
+function showPasteError(zone, message) {
+    const hint = zone.querySelector('.paste-hint');
+    if (hint) {
+        const originalText = hint.textContent;
+        hint.textContent = message;
+        hint.style.color = '#dc2626';
+        
+        setTimeout(() => {
+            hint.textContent = 'Click here and paste image (Ctrl+V)';
+            hint.style.color = '';
+        }, 3000);
+    }
 }
 
 function clearPastedImage() {

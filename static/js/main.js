@@ -28,7 +28,7 @@ const modalImage = document.getElementById('modal-image');
 const tabBtns = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
 
-// Paste zones
+// Paste zones - Question
 const pasteZone = document.getElementById('paste-zone');
 const previewImage = document.getElementById('preview-image');
 const clearImageBtn = document.getElementById('clear-image');
@@ -40,6 +40,19 @@ const editPreviewImage = document.getElementById('edit-preview-image');
 const editClearImageBtn = document.getElementById('edit-clear-image');
 const editImageInput = document.getElementById('edit-image');
 const editPasteHint = editPasteZone.querySelector('.paste-hint');
+
+// Paste zones - Solution
+const solutionPasteZone = document.getElementById('solution-paste-zone');
+const solutionPreviewImage = document.getElementById('solution-preview-image');
+const clearSolutionImageBtn = document.getElementById('clear-solution-image');
+const newSolutionImageInput = document.getElementById('new-solution-image');
+const solutionPasteHint = solutionPasteZone.querySelector('.paste-hint');
+
+const editSolutionPasteZone = document.getElementById('edit-solution-paste-zone');
+const editSolutionPreviewImage = document.getElementById('edit-solution-preview-image');
+const editClearSolutionImageBtn = document.getElementById('edit-clear-solution-image');
+const editSolutionImageInput = document.getElementById('edit-solution-image');
+const editSolutionPasteHint = editSolutionPasteZone.querySelector('.paste-hint');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -116,7 +129,8 @@ function renderTable() {
         row.innerHTML = `
             <td>${formatDate(m.date_added)}</td>
             <td>${escapeHtml(m.topic)}</td>
-            <td>${renderThumbnail(m.question_image, m.id)}</td>
+            <td>${renderThumbnail(m.question_image, m.id, 'question')}</td>
+            <td>${renderThumbnail(m.solution_image, m.id, 'solution')}</td>
             <td>${renderMistakeType(m.mistake_type)}</td>
             <td>${escapeHtml(m.why_happened)}</td>
             <td>${escapeHtml(m.how_to_avoid)}</td>
@@ -155,11 +169,11 @@ function renderTopicFilter() {
     });
 }
 
-function renderThumbnail(imageData, id) {
+function renderThumbnail(imageData, id, type) {
     if (!imageData) {
         return '<span class="no-image">No image</span>';
     }
-    return `<img src="${imageData}" class="thumbnail" data-src="${imageData}" alt="Question">`;
+    return `<img src="${imageData}" class="thumbnail" data-src="${imageData}" alt="${type}">`;
 }
 
 function renderMistakeType(type) {
@@ -274,6 +288,7 @@ function setupEventListeners() {
             topic: document.getElementById('new-topic').value,
             mistake_type: document.getElementById('new-type').value,
             question_image: newImageInput.value,
+            solution_image: newSolutionImageInput.value,
             why_happened: document.getElementById('new-why').value,
             how_to_avoid: document.getElementById('new-avoid').value
         };
@@ -283,6 +298,7 @@ function setupEventListeners() {
         // Reset form
         addForm.reset();
         clearPastedImage();
+        clearPastedSolutionImage();
         
         // Reload
         loadMistakes();
@@ -304,6 +320,7 @@ function setupEventListeners() {
             topic: document.getElementById('edit-topic').value,
             mistake_type: document.getElementById('edit-type').value,
             question_image: editImageInput.value,
+            solution_image: editSolutionImageInput.value,
             why_happened: document.getElementById('edit-why').value,
             how_to_avoid: document.getElementById('edit-avoid').value
         };
@@ -357,6 +374,8 @@ function setupEventListeners() {
     // Clear image buttons
     clearImageBtn.addEventListener('click', clearPastedImage);
     editClearImageBtn.addEventListener('click', clearEditPastedImage);
+    clearSolutionImageBtn.addEventListener('click', clearPastedSolutionImage);
+    editClearSolutionImageBtn.addEventListener('click', clearEditPastedSolutionImage);
 }
 
 // Clipboard Paste Handling
@@ -364,8 +383,10 @@ function setupClipboardPaste() {
     // Make paste zones focusable and add visual feedback
     pasteZone.setAttribute('tabindex', '0');
     editPasteZone.setAttribute('tabindex', '0');
+    solutionPasteZone.setAttribute('tabindex', '0');
+    editSolutionPasteZone.setAttribute('tabindex', '0');
     
-    // Add form paste zone - multiple event approaches for reliability
+    // Add form question paste zone
     pasteZone.addEventListener('click', () => {
         pasteZone.focus();
         pasteZone.classList.add('active');
@@ -381,7 +402,7 @@ function setupClipboardPaste() {
         updatePasteHint(pasteZone, 'Click here and paste image (Ctrl+V)');
     });
     
-    pasteZone.addEventListener('paste', (e) => handlePaste(e, false));
+    pasteZone.addEventListener('paste', (e) => handlePaste(e, 'question', false));
     pasteZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         pasteZone.classList.add('active');
@@ -391,9 +412,37 @@ function setupClipboardPaste() {
         pasteZone.classList.remove('active');
         updatePasteHint(pasteZone, 'Click here and paste image (Ctrl+V)');
     });
-    pasteZone.addEventListener('drop', (e) => handleDrop(e, false));
+    pasteZone.addEventListener('drop', (e) => handleDrop(e, 'question', false));
     
-    // Edit form paste zone
+    // Add form solution paste zone
+    solutionPasteZone.addEventListener('click', () => {
+        solutionPasteZone.focus();
+        solutionPasteZone.classList.add('active');
+    });
+    
+    solutionPasteZone.addEventListener('focus', () => {
+        solutionPasteZone.classList.add('active');
+        updatePasteHint(solutionPasteZone, 'Ready to paste! Press Ctrl+V');
+    });
+    
+    solutionPasteZone.addEventListener('blur', () => {
+        solutionPasteZone.classList.remove('active');
+        updatePasteHint(solutionPasteZone, 'Click here and paste image (Ctrl+V)');
+    });
+    
+    solutionPasteZone.addEventListener('paste', (e) => handlePaste(e, 'solution', false));
+    solutionPasteZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        solutionPasteZone.classList.add('active');
+        updatePasteHint(solutionPasteZone, 'Drop image here');
+    });
+    solutionPasteZone.addEventListener('dragleave', () => {
+        solutionPasteZone.classList.remove('active');
+        updatePasteHint(solutionPasteZone, 'Click here and paste image (Ctrl+V)');
+    });
+    solutionPasteZone.addEventListener('drop', (e) => handleDrop(e, 'solution', false));
+    
+    // Edit form question paste zone
     editPasteZone.addEventListener('click', () => {
         editPasteZone.focus();
         editPasteZone.classList.add('active');
@@ -409,7 +458,7 @@ function setupClipboardPaste() {
         updatePasteHint(editPasteZone, 'Click here and paste image (Ctrl+V)');
     });
     
-    editPasteZone.addEventListener('paste', (e) => handlePaste(e, true));
+    editPasteZone.addEventListener('paste', (e) => handlePaste(e, 'question', true));
     editPasteZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         editPasteZone.classList.add('active');
@@ -419,14 +468,42 @@ function setupClipboardPaste() {
         editPasteZone.classList.remove('active');
         updatePasteHint(editPasteZone, 'Click here and paste image (Ctrl+V)');
     });
-    editPasteZone.addEventListener('drop', (e) => handleDrop(e, true));
+    editPasteZone.addEventListener('drop', (e) => handleDrop(e, 'question', true));
+    
+    // Edit form solution paste zone
+    editSolutionPasteZone.addEventListener('click', () => {
+        editSolutionPasteZone.focus();
+        editSolutionPasteZone.classList.add('active');
+    });
+    
+    editSolutionPasteZone.addEventListener('focus', () => {
+        editSolutionPasteZone.classList.add('active');
+        updatePasteHint(editSolutionPasteZone, 'Ready to paste! Press Ctrl+V');
+    });
+    
+    editSolutionPasteZone.addEventListener('blur', () => {
+        editSolutionPasteZone.classList.remove('active');
+        updatePasteHint(editSolutionPasteZone, 'Click here and paste image (Ctrl+V)');
+    });
+    
+    editSolutionPasteZone.addEventListener('paste', (e) => handlePaste(e, 'solution', true));
+    editSolutionPasteZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        editSolutionPasteZone.classList.add('active');
+        updatePasteHint(editSolutionPasteZone, 'Drop image here');
+    });
+    editSolutionPasteZone.addEventListener('dragleave', () => {
+        editSolutionPasteZone.classList.remove('active');
+        updatePasteHint(editSolutionPasteZone, 'Click here and paste image (Ctrl+V)');
+    });
+    editSolutionPasteZone.addEventListener('drop', (e) => handleDrop(e, 'solution', true));
     
     // Global paste handler as fallback when tab is active
     document.addEventListener('paste', (e) => {
         // Only handle if paste zone is focused or active tab is add-tab
         const addTabActive = document.getElementById('add-tab').classList.contains('active');
         if (addTabActive && document.activeElement === pasteZone) {
-            handlePaste(e, false);
+            handlePaste(e, 'question', false);
         }
     });
 }
@@ -438,11 +515,19 @@ function updatePasteHint(zone, text) {
     }
 }
 
-function handlePaste(e, isEdit) {
+function getZoneByType(imageType, isEdit) {
+    if (imageType === 'solution') {
+        return isEdit ? editSolutionPasteZone : solutionPasteZone;
+    } else {
+        return isEdit ? editPasteZone : pasteZone;
+    }
+}
+
+function handlePaste(e, imageType, isEdit) {
     e.preventDefault();
     e.stopPropagation();
     
-    const zone = isEdit ? editPasteZone : pasteZone;
+    const zone = getZoneByType(imageType, isEdit);
     updatePasteHint(zone, 'Processing image...');
     
     // Try to get image from clipboard
@@ -465,7 +550,7 @@ function handlePaste(e, isEdit) {
                 const file = item.getAsFile();
                 if (file) {
                     imageFound = true;
-                    processImage(file, isEdit);
+                    processImage(file, imageType, isEdit);
                     break;
                 }
             }
@@ -478,7 +563,7 @@ function handlePaste(e, isEdit) {
             const file = clipboardData.files[i];
             if (file.type.indexOf('image') !== -1) {
                 imageFound = true;
-                processImage(file, isEdit);
+                processImage(file, imageType, isEdit);
                 break;
             }
         }
@@ -494,7 +579,7 @@ function handlePaste(e, isEdit) {
                     imageFound = true;
                     // If it's already a data URL
                     if (imageData.startsWith('data:image')) {
-                        displayImage(imageData, isEdit);
+                        displayImage(imageData, imageType, isEdit);
                     }
                     break;
                 }
@@ -508,11 +593,11 @@ function handlePaste(e, isEdit) {
     }
 }
 
-function handleDrop(e, isEdit) {
+function handleDrop(e, imageType, isEdit) {
     e.preventDefault();
     e.stopPropagation();
     
-    const zone = isEdit ? editPasteZone : pasteZone;
+    const zone = getZoneByType(imageType, isEdit);
     zone.classList.remove('active');
     updatePasteHint(zone, 'Processing image...');
     
@@ -522,7 +607,7 @@ function handleDrop(e, isEdit) {
         for (let i = 0; i < files.length; i++) {
             if (files[i].type.startsWith('image/')) {
                 imageFound = true;
-                processImage(files[i], isEdit);
+                processImage(files[i], imageType, isEdit);
                 break;
             }
         }
@@ -535,13 +620,13 @@ function handleDrop(e, isEdit) {
     }
 }
 
-function processImage(file, isEdit) {
+function processImage(file, imageType, isEdit) {
     if (!file) {
         console.error('No file provided to processImage');
         return;
     }
     
-    const zone = isEdit ? editPasteZone : pasteZone;
+    const zone = getZoneByType(imageType, isEdit);
     
     // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024;
@@ -554,7 +639,7 @@ function processImage(file, isEdit) {
     
     reader.onload = (e) => {
         const base64 = e.target.result;
-        displayImage(base64, isEdit);
+        displayImage(base64, imageType, isEdit);
     };
     
     reader.onerror = () => {
@@ -565,19 +650,35 @@ function processImage(file, isEdit) {
     reader.readAsDataURL(file);
 }
 
-function displayImage(base64Data, isEdit) {
-    if (isEdit) {
-        editImageInput.value = base64Data;
-        editPreviewImage.src = base64Data;
-        editPreviewImage.classList.remove('hidden');
-        editClearImageBtn.classList.remove('hidden');
-        editPasteHint.classList.add('hidden');
+function displayImage(base64Data, imageType, isEdit) {
+    if (imageType === 'solution') {
+        if (isEdit) {
+            editSolutionImageInput.value = base64Data;
+            editSolutionPreviewImage.src = base64Data;
+            editSolutionPreviewImage.classList.remove('hidden');
+            editClearSolutionImageBtn.classList.remove('hidden');
+            editSolutionPasteHint.classList.add('hidden');
+        } else {
+            newSolutionImageInput.value = base64Data;
+            solutionPreviewImage.src = base64Data;
+            solutionPreviewImage.classList.remove('hidden');
+            clearSolutionImageBtn.classList.remove('hidden');
+            solutionPasteHint.classList.add('hidden');
+        }
     } else {
-        newImageInput.value = base64Data;
-        previewImage.src = base64Data;
-        previewImage.classList.remove('hidden');
-        clearImageBtn.classList.remove('hidden');
-        pasteHint.classList.add('hidden');
+        if (isEdit) {
+            editImageInput.value = base64Data;
+            editPreviewImage.src = base64Data;
+            editPreviewImage.classList.remove('hidden');
+            editClearImageBtn.classList.remove('hidden');
+            editPasteHint.classList.add('hidden');
+        } else {
+            newImageInput.value = base64Data;
+            previewImage.src = base64Data;
+            previewImage.classList.remove('hidden');
+            clearImageBtn.classList.remove('hidden');
+            pasteHint.classList.add('hidden');
+        }
     }
 }
 
@@ -611,6 +712,22 @@ function clearEditPastedImage() {
     editPasteHint.classList.remove('hidden');
 }
 
+function clearPastedSolutionImage() {
+    newSolutionImageInput.value = '';
+    solutionPreviewImage.src = '';
+    solutionPreviewImage.classList.add('hidden');
+    clearSolutionImageBtn.classList.add('hidden');
+    solutionPasteHint.classList.remove('hidden');
+}
+
+function clearEditPastedSolutionImage() {
+    editSolutionImageInput.value = '';
+    editSolutionPreviewImage.src = '';
+    editSolutionPreviewImage.classList.add('hidden');
+    editClearSolutionImageBtn.classList.add('hidden');
+    editSolutionPasteHint.classList.remove('hidden');
+}
+
 // Modal Functions
 function openEditModal(id) {
     const mistake = mistakes.find(m => m.id === id);
@@ -622,7 +739,7 @@ function openEditModal(id) {
     document.getElementById('edit-why').value = mistake.why_happened;
     document.getElementById('edit-avoid').value = mistake.how_to_avoid;
     
-    // Handle image
+    // Handle question image
     if (mistake.question_image) {
         editImageInput.value = mistake.question_image;
         editPreviewImage.src = mistake.question_image;
@@ -633,6 +750,17 @@ function openEditModal(id) {
         clearEditPastedImage();
     }
     
+    // Handle solution image
+    if (mistake.solution_image) {
+        editSolutionImageInput.value = mistake.solution_image;
+        editSolutionPreviewImage.src = mistake.solution_image;
+        editSolutionPreviewImage.classList.remove('hidden');
+        editClearSolutionImageBtn.classList.remove('hidden');
+        editSolutionPasteHint.classList.add('hidden');
+    } else {
+        clearEditPastedSolutionImage();
+    }
+    
     editModal.classList.remove('hidden');
 }
 
@@ -640,6 +768,7 @@ function closeEditModal() {
     editModal.classList.add('hidden');
     editForm.reset();
     clearEditPastedImage();
+    clearEditPastedSolutionImage();
 }
 
 function openDeleteModal(id) {

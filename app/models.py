@@ -76,6 +76,7 @@ def add_mistake(data: dict) -> dict:
         "id": str(uuid.uuid4()),
         "topic": data.get("topic", "").strip(),
         "question_image": data.get("question_image", ""),
+        "solution_image": data.get("solution_image", ""),
         "mistake_type": data.get("mistake_type", "Conceptual"),
         "why_happened": data.get("why_happened", "").strip(),
         "how_to_avoid": data.get("how_to_avoid", "").strip(),
@@ -99,6 +100,8 @@ def update_mistake(mistake_id: str, data: dict) -> Optional[dict]:
                 mistakes[i]["topic"] = data["topic"].strip()
             if "question_image" in data:
                 mistakes[i]["question_image"] = data["question_image"]
+            if "solution_image" in data:
+                mistakes[i]["solution_image"] = data["solution_image"]
             if "mistake_type" in data:
                 mistakes[i]["mistake_type"] = data["mistake_type"]
             if "why_happened" in data:
